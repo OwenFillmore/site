@@ -5,31 +5,14 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted   # <-- simplest. (You can refine labels later.)
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install rsync
-        run: sudo apt-get update && sudo apt-get install -y rsync
-
-      - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Trust host
+      - name: Deploy to web root
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.PI_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Rsync site to Pi
-        run: |
-          rsync -avz --delete \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude 'README.md' \
-            --exclude 'LICENSE' \
-            ./ ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }}:${{ secrets.PI_PATH }}/
-
-      - name: Reload Caddy
-        run: ssh ${{ secrets.PI_USER }}@${{ secrets.PI_HOST }} "sudo systemctl reload caddy"
+          sudo rsync -av --delete \
+            --exclude '.git/' --exclude '.github/' \
+            --exclude 'README.md' --exclude 'LICENSE' \
+            --chown=web:web \
+            ./ /var/www/owenfillmore.com/
+          sudo systemctl reload caddy
