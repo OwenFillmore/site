@@ -1,25 +1,22 @@
 import Link from 'next/link'
 import { VolumeChart, E1RMChart } from '@/components/charts'
+import { prisma } from '@/lib/prisma'
 
 export default async function DashboardPage() {
-  const [workoutsRes, bodyRes] = await Promise.all([
-    fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/workouts`, { cache: 'no-store' }),
-    fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/bodylogs`, { cache: 'no-store' }),
+  const [workouts, body] = await Promise.all([
+    prisma.workout.findMany({ orderBy: { date: 'desc' }, include: { sets: true } }),
+    prisma.bodyLog.findMany({ orderBy: { date: 'desc' } }),
   ])
-  const workoutsJson = await workoutsRes.json()
-  const bodyJson = await bodyRes.json()
-  const workouts = (workoutsJson.data ?? []) as Array<{ date: string; sets: Array<{ reps: number; weight: number }> }>
-  const body = (bodyJson.data ?? []) as Array<{ date: string; bodyWeight: number }>
 
-  const volumeByDay = workouts.slice(0, 7).map((w) => ({
+  const volumeByDay = workouts.slice(0, 7).map((w: { date: Date; sets: Array<{ reps: number; weight: number }> }) => ({
     x: new Date(w.date).toISOString().slice(5, 10),
-    y: w.sets.reduce((sum, s) => sum + s.reps * s.weight, 0),
+    y: w.sets.reduce((sum: number, s: { reps: number; weight: number }) => sum + s.reps * s.weight, 0),
   }))
 
-  const e1rmTrend = workouts.slice(0, 7).map((w) => ({
+  const e1rmTrend = workouts.slice(0, 7).map((w: { date: Date; sets: Array<{ reps: number; weight: number }> }) => ({
     x: new Date(w.date).toISOString().slice(5, 10),
     y: Math.round(
-      w.sets.length ? Math.max(...w.sets.map((s) => s.weight * (1 + s.reps / 30))) : 0
+      w.sets.length ? Math.max(...w.sets.map((s: { reps: number; weight: number }) => s.weight * (1 + s.reps / 30))) : 0
     ),
   }))
 
@@ -50,8 +47,8 @@ export default async function DashboardPage() {
       <section className="rounded-lg border p-4">
         <div className="font-medium mb-2">Recent Body Weight</div>
         <ul className="text-sm text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-2">
-          {body.slice(0, 8).map((b) => (
-            <li key={b.date}>{new Date(b.date).toISOString().slice(5,10)} — {b.bodyWeight} kg</li>
+          {body.slice(0, 8).map((b: { id: string; date: Date; bodyWeight: number }) => (
+            <li key={b.id}>{new Date(b.date).toISOString().slice(5,10)} — {b.bodyWeight} kg</li>
           ))}
         </ul>
       </section>

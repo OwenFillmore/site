@@ -1,6 +1,6 @@
 'use client'
-import { useSettings } from '@/stores/settings'
-import { useRef } from 'react'
+import { useSettings, type SettingsState } from '@/stores/settings'
+import { useRef, type ChangeEvent } from 'react'
 
 export default function SettingsPage() {
   return (
@@ -9,14 +9,7 @@ export default function SettingsPage() {
       <div className="rounded border p-4 space-y-3">
         <div className="space-y-1">
           <div className="font-medium">Units</div>
-          <select
-            className="border rounded px-2 py-1"
-            value={useSettings.getState().unit}
-            onChange={(e) => useSettings.getState().setUnit(e.target.value as 'kg' | 'lb')}
-          >
-            <option value="kg">Kilograms</option>
-            <option value="lb">Pounds</option>
-          </select>
+          <UnitSelect />
         </div>
         <div className="space-y-2">
           <div className="font-medium">Data</div>
@@ -44,7 +37,7 @@ function CsvImport({ label, action }: { label: string; action: string }) {
         type="file"
         accept="text/csv"
         className="hidden"
-        onChange={async (e) => {
+        onChange={async (e: ChangeEvent<HTMLInputElement>) => {
           const file = e.target.files?.[0]
           if (!file) return
           const text = await file.text()
@@ -53,5 +46,20 @@ function CsvImport({ label, action }: { label: string; action: string }) {
         }}
       />
     </>
+  )
+}
+
+function UnitSelect() {
+  const unit = useSettings((s: SettingsState) => s.unit)
+  const setUnit = useSettings((s: SettingsState) => s.setUnit)
+  return (
+    <select
+      className="border rounded px-2 py-1"
+      value={unit}
+      onChange={(e: ChangeEvent<HTMLSelectElement>) => setUnit(e.target.value as 'kg' | 'lb')}
+    >
+      <option value="kg">Kilograms</option>
+      <option value="lb">Pounds</option>
+    </select>
   )
 }
